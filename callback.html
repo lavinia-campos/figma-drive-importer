@@ -1,16 +1,49 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Authenticating…</title>
+<head>
+<meta charset="utf-8">
+<title>Drive Image Importer — Auth</title>
 <style>
-  body { font-family: system-ui, sans-serif; display: flex; align-items: center;
-         justify-content: center; height: 100vh; margin: 0; background: #f7f7f7; }
-  p { color: #555; font-size: 14px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; background: #f7f7f7; padding: 24px;
+  }
+  .card {
+    background: #fff; border-radius: 12px; padding: 32px 28px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08); max-width: 420px;
+    width: 100%; text-align: center; display: flex;
+    flex-direction: column; gap: 16px;
+  }
+  .icon { font-size: 40px; }
+  h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+  p { font-size: 13px; color: #666; line-height: 1.6; }
+  .token-box {
+    background: #f0f7ff; border: 1px solid #c0deff;
+    border-radius: 8px; padding: 12px; font-family: monospace;
+    font-size: 11px; color: #1a1a1a; word-break: break-all;
+    text-align: left; max-height: 80px; overflow: hidden;
+  }
+  button {
+    height: 42px; border: none; border-radius: 8px;
+    font-size: 13px; font-family: inherit; font-weight: 600;
+    cursor: pointer; background: #0d99ff; color: #fff;
+    transition: background 0.1s;
+  }
+  button:hover { background: #0082d6; }
+  button.copied { background: #14ae5c; }
+  .hint { font-size: 11px; color: #999; }
+  .error { color: #e03434; font-size: 13px; }
 </style>
 </head>
 <body>
-<p id="msg">Authenticating… you can close this window.</p>
+<div class="card" id="card">
+  <div class="icon">⏳</div>
+  <h1>Autenticando…</h1>
+</div>
+
 <script>
-  // Parse URL hash returned by Google OAuth implicit flow
   var hash = location.hash.replace(/^#/, '');
   var params = {};
   hash.split('&').forEach(function(pair) {
@@ -18,16 +51,52 @@
     params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
   });
 
-  if (params.access_token && window.opener) {
-    window.opener.postMessage(
-      { type: 'drive-oauth-token', token: params.access_token, expiresIn: params.expires_in },
-      '*'
-    );
-    window.close();
+  var card = document.getElementById('card');
+
+  if (params.access_token) {
+    var token = params.access_token;
+
+    card.innerHTML =
+      '<div class="icon">✅</div>' +
+      '<h1>Login realizado!</h1>' +
+      '<p>Copie o token abaixo e cole no plugin do Figma.</p>' +
+      '<div class="token-box" id="tokenBox">' + token + '</div>' +
+      '<button id="copyBtn" onclick="copyToken()">Copiar token</button>' +
+      '<p class="hint">Depois de colar no Figma, você pode fechar esta aba.</p>';
+
+    // Auto-copy on load
+    copyToken();
+
   } else if (params.error) {
-    document.getElementById('msg').textContent = 'Authentication failed: ' + params.error;
+    card.innerHTML =
+      '<div class="icon">❌</div>' +
+      '<h1>Erro de autenticação</h1>' +
+      '<p class="error">' + params.error + '</p>' +
+      '<p>Feche esta aba e tente novamente no Figma.</p>';
   } else {
-    document.getElementById('msg').textContent = 'No token received. You can close this window.';
+    card.innerHTML =
+      '<div class="icon">❓</div>' +
+      '<h1>Nenhum token recebido</h1>' +
+      '<p>Feche esta aba e tente novamente.</p>';
+  }
+
+  function copyToken() {
+    var token = params.access_token;
+    if (!token) return;
+
+    navigator.clipboard.writeText(token).then(function() {
+      var btn = document.getElementById('copyBtn');
+      if (btn) { btn.textContent = '✓ Copiado!'; btn.classList.add('copied'); }
+    }).catch(function() {
+      // Fallback: select the text
+      var box = document.getElementById('tokenBox');
+      if (box) {
+        var range = document.createRange();
+        range.selectNodeContents(box);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+      }
+    });
   }
 </script>
 </body>

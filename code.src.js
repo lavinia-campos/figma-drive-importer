@@ -16,9 +16,41 @@ figma.ui.onmessage = async function(msg) {
       break;
     }
 
+    case 'open-oauth': {
+      figma.openExternal(msg.url);
+      break;
+    }
+
     case 'get-token': {
       var stored = await figma.clientStorage.getAsync('settings') || {};
       figma.ui.postMessage({ type: 'current-token', token: stored.token || null });
+      break;
+    }
+
+    case 'apply-by-name': {
+      var fileName = msg.fileName;
+      var frameName = fileName.replace(/\.[^/.]+$/, ''); // strip extension
+      var layerName = msg.layerName;
+
+      var frame = findFrameByName(figma.currentPage, frameName);
+      if (!frame) {
+        figma.ui.postMessage({ type: 'named-error', fileName: fileName, message: 'Frame "' + frameName + '" not found' });
+        return;
+      }
+
+      var target = findLayerByName(frame, layerName);
+      if (!target || !('fills' in target)) {
+        figma.ui.postMessage({ type: 'named-error', fileName: fileName, message: 'Layer "' + layerName + '" not found in "' + frameName + '"' });
+        return;
+      }
+
+      try {
+        var image = figma.createImage(new Uint8Array(msg.imageData));
+        target.fills = [{ type: 'IMAGE', imageHash: image.hash, scaleMode: 'FILL' }];
+        figma.ui.postMessage({ type: 'named-applied', fileName: fileName });
+      } catch (e) {
+        figma.ui.postMessage({ type: 'named-error', fileName: fileName, message: 'Failed to apply image' });
+      }
       break;
     }
 
@@ -51,6 +83,13 @@ figma.ui.onmessage = async function(msg) {
     }
   }
 };
+
+function findFrameByName(page, name) {
+  for (var i = 0; i < page.children.length; i++) {
+    if (page.children[i].name === name) return page.children[i];
+  }
+  return null;
+}
 
 function findLayerByName(node, name) {
   if (node.name === name) return node;

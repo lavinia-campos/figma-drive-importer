@@ -286,6 +286,33 @@
   }
 
   .hidden { display: none !important; }
+
+  .batch-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-bottom: 1px solid #e5e5e5;
+    background: #f0f7ff;
+    gap: 8px;
+  }
+
+  .batch-bar span {
+    font-size: 11px;
+    color: #555;
+    flex: 1;
+  }
+
+  .batch-result {
+    padding: 6px 12px;
+    font-size: 11px;
+    display: none;
+    gap: 10px;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .batch-result.visible { display: flex; }
+  .batch-result .ok { color: #14ae5c; font-weight: 500; }
+  .batch-result .miss { color: #e03434; font-weight: 500; }
 </style>
 </head>
 <body>
@@ -294,16 +321,32 @@
 <div class="auth-screen" id="authScreen">
   <div class="auth-logo">🗂</div>
   <div class="auth-title">Drive Image Importer</div>
-  <div class="auth-desc">Sign in with your Google account to access Drive folders shared with you.</div>
-  <button class="btn-google" id="signInBtn" onclick="startOAuth()">
-    <svg width="16" height="16" viewBox="0 0 48 48">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.3 0 24 0 14.6 0 6.6 5.4 2.5 13.3l7.8 6C12.3 13 17.7 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.8-2.2 5.1-4.6 6.7l7.2 5.6c4.2-3.9 6.6-9.6 6.6-16.3z"/>
-      <path fill="#FBBC05" d="M10.3 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.8l7.8-6.1z"/>
-      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2.2 1.5-5 2.4-8.7 2.4-6.3 0-11.6-4.2-13.6-9.9l-7.8 6C6.5 42.5 14.6 48 24 48z"/>
-    </svg>
-    Sign in with Google
-  </button>
+
+  <!-- Step 1: Sign in button -->
+  <div id="step1">
+    <div class="auth-desc">Sign in with your Google account to access Drive folders shared with you.</div>
+    <button class="btn-google" id="signInBtn" onclick="startOAuth()">
+      <svg width="16" height="16" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.3 0 24 0 14.6 0 6.6 5.4 2.5 13.3l7.8 6C12.3 13 17.7 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.8-2.2 5.1-4.6 6.7l7.2 5.6c4.2-3.9 6.6-9.6 6.6-16.3z"/>
+        <path fill="#FBBC05" d="M10.3 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.8l7.8-6.1z"/>
+        <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2.2 1.5-5 2.4-8.7 2.4-6.3 0-11.6-4.2-13.6-9.9l-7.8 6C6.5 42.5 14.6 48 24 48z"/>
+      </svg>
+      Sign in with Google
+    </button>
+  </div>
+
+  <!-- Step 2: Paste token (shown after browser opens) -->
+  <div id="step2" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center;gap:12px;">
+    <div class="auth-desc">
+      ✅ A browser tab opened.<br><br>
+      After signing in, the page will show a token — copie e cole aqui:
+    </div>
+    <input type="text" id="tokenPaste" placeholder="Cole o token aqui…" style="width:90%;text-align:center;" />
+    <button class="btn-primary" onclick="confirmToken()" style="height:34px;padding:0 20px;font-size:12px;">Confirmar</button>
+    <button class="btn-link" onclick="backToStep1()" style="font-size:11px;color:#999;">← Voltar</button>
+  </div>
+
   <div class="status error" id="authError"></div>
 </div>
 
@@ -349,6 +392,18 @@
     </div>
   </div>
 
+  <!-- Batch bar (shown after images load) -->
+  <div class="batch-bar hidden" id="batchBar">
+    <span id="batchLabel">—</span>
+    <button class="btn-primary" id="batchBtn" onclick="applyBatch()">Apply to frames</button>
+  </div>
+
+  <!-- Batch result summary -->
+  <div class="batch-result" id="batchResult">
+    <span class="ok" id="batchOk"></span>
+    <span class="miss" id="batchMiss"></span>
+  </div>
+
   <!-- Status -->
   <div class="status" id="status"></div>
 
@@ -370,7 +425,7 @@
 
   // ── Replace these two values before distributing ──
   var CLIENT_ID = '497003060104-bjeda4r7egag0u8ulqcv56i4a9b1u5c4.apps.googleusercontent.com';
-  var CALLBACK_URL = 'https://lavinia-campos.github.io/figma-drive-importer/callback.html'; // e.g. https://yourteam.github.io/figma-callback/
+  var CALLBACK_URL = 'https://lavinia-campos.github.io/figma-drive-importer/callback.html';
   // ─────────────────────────────────────────────────
 
   var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
@@ -402,53 +457,60 @@
     }
     if (msg.type === 'success') { setStatus('', ''); applying = false; }
     if (msg.type === 'error') { setStatus(msg.message, 'error'); applying = false; }
+    if (msg.type === 'named-applied') { batchResolve(msg); }
+    if (msg.type === 'named-error')   { batchResolve(msg); }
   }
 
   // ── Auth ──
   function startOAuth() {
-    var state = Math.random().toString(36).slice(2);
-    sessionStorage.setItem('oauthState', state);
-
     var params = [
       'client_id=' + encodeURIComponent(CLIENT_ID),
       'redirect_uri=' + encodeURIComponent(CALLBACK_URL),
       'response_type=token',
-      'scope=' + encodeURIComponent(SCOPE),
-      'state=' + state
+      'scope=' + encodeURIComponent(SCOPE)
     ].join('&');
 
     var url = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
-    oauthPopup = window.open(url, 'google-auth', 'width=500,height=620');
 
-    document.getElementById('signInBtn').disabled = true;
+    // Ask main thread to open in the user's browser (official Figma API)
+    parent.postMessage({ pluginMessage: { type: 'open-oauth', url: url } }, '*');
+
     document.getElementById('authError').textContent = '';
-
-    // Detect if popup was blocked
-    if (!oauthPopup || oauthPopup.closed) {
-      document.getElementById('authError').textContent = 'Popup blocked — allow popups for Figma and try again.';
-      document.getElementById('signInBtn').disabled = false;
-    }
+    document.getElementById('step1').classList.add('hidden');
+    document.getElementById('step2').classList.remove('hidden');
   }
 
-  function receiveToken(token, expiresIn) {
-    if (oauthPopup) { oauthPopup.close(); oauthPopup = null; }
+  function backToStep1() {
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step1').classList.remove('hidden');
+    document.getElementById('tokenPaste').value = '';
+    document.getElementById('authError').textContent = '';
+  }
 
+  async function confirmToken() {
+    var token = document.getElementById('tokenPaste').value.trim();
+    if (!token) {
+      document.getElementById('authError').textContent = 'Cole o token primeiro.';
+      return;
+    }
+    document.getElementById('authError').textContent = '';
+    await receiveToken(token, 3600);
+  }
+
+  async function receiveToken(token, expiresIn) {
     var expiry = Date.now() + ((parseInt(expiresIn) || 3600) * 1000);
 
-    // Fetch user email to display
-    fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: 'Bearer ' + token }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(info) {
-      var email = info.email || '';
-      persist({ token: token, tokenExpiry: expiry, userEmail: email });
-      showMainScreen(email);
-    })
-    .catch(function() {
-      persist({ token: token, tokenExpiry: expiry, userEmail: '' });
-      showMainScreen('');
-    });
+    try {
+      var r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (!r.ok) throw new Error('Token inválido');
+      var info = await r.json();
+      persist({ token: token, tokenExpiry: expiry, userEmail: info.email || '' });
+      showMainScreen(info.email || '');
+    } catch(e) {
+      document.getElementById('authError').textContent = 'Token inválido — tente fazer login novamente.';
+    }
   }
 
   function signOut() {
@@ -560,11 +622,16 @@
 
       if (images.length === 0) {
         setStatus('No images found in this folder', 'info');
+        document.getElementById('batchBar').classList.add('hidden');
         renderGrid([]);
       } else {
-        setStatus(images.length + ' image' + (images.length !== 1 ? 's' : '') + ' — click one to apply', 'info');
+        var n = images.length;
+        setStatus(n + ' image' + (n !== 1 ? 's' : '') + ' — click one to apply individually', 'info');
+        document.getElementById('batchLabel').textContent = n + ' image' + (n !== 1 ? 's' : '') + ' — apply by matching frame name';
+        document.getElementById('batchBar').classList.remove('hidden');
+        document.getElementById('batchResult').classList.remove('visible');
         currentImages = images;
-        renderGrid(images, token);
+        renderGrid(images);
       }
     } catch (err) {
       setStatus(err.message, 'error');
@@ -633,6 +700,76 @@
     } finally {
       card.classList.remove('applying');
     }
+  }
+
+  // ── Batch ──
+  var batchResolve = null;
+
+  function applyOneByName(imageData, fileName, layerName) {
+    return new Promise(function(resolve) {
+      batchResolve = resolve;
+      parent.postMessage({
+        pluginMessage: { type: 'apply-by-name', imageData: imageData, fileName: fileName, layerName: layerName }
+      }, '*');
+    });
+  }
+
+  async function applyBatch() {
+    var layerName = document.getElementById('layerName').value.trim();
+    if (!layerName) {
+      setStatus('Set a target layer name in Settings first', 'error');
+      document.getElementById('settingsPanel').classList.add('open');
+      document.getElementById('settingsArrow').textContent = '▴';
+      return;
+    }
+
+    var token = await getToken();
+    if (!token) { showAuthScreen(); return; }
+
+    var btn = document.getElementById('batchBtn');
+    btn.disabled = true;
+    document.getElementById('batchResult').classList.remove('visible');
+
+    var applied = 0;
+    var missed = [];
+
+    for (var i = 0; i < currentImages.length; i++) {
+      var img = currentImages[i];
+      setStatus('<div class="spinner"></div> ' + (i + 1) + ' / ' + currentImages.length + ' — ' + escapeHtml(img.name), 'info');
+
+      try {
+        var res = await fetch(
+          'https://www.googleapis.com/drive/v3/files/' + img.id + '?alt=media',
+          { headers: { Authorization: 'Bearer ' + token } }
+        );
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        var buffer = await res.arrayBuffer();
+        var imageData = Array.from(new Uint8Array(buffer));
+        var result = await applyOneByName(imageData, img.name, layerName);
+
+        if (result.type === 'named-applied') {
+          applied++;
+          // Mark card green
+          var card = document.getElementById('card-' + i);
+          if (card) card.style.borderColor = '#14ae5c';
+        } else {
+          missed.push(img.name);
+          var card = document.getElementById('card-' + i);
+          if (card) card.style.borderColor = '#e03434';
+        }
+      } catch (e) {
+        missed.push(img.name);
+      }
+    }
+
+    setStatus('', '');
+    btn.disabled = false;
+
+    var resultEl = document.getElementById('batchResult');
+    document.getElementById('batchOk').textContent = applied + ' applied';
+    document.getElementById('batchMiss').textContent = missed.length > 0 ? missed.length + ' frame' + (missed.length !== 1 ? 's' : '') + ' not found' : '';
+    resultEl.classList.add('visible');
   }
 
   function setStatus(html, type) {
