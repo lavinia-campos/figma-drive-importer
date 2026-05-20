@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 11px;
+    background: #fff;
+    color: #1a1a1a;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Auth screen ── */
+  .auth-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 32px 24px;
+    text-align: center;
+  }
+
+  .auth-logo {
+    width: 48px;
+    height: 48px;
+    background: #f0f7ff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+
+  .auth-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .auth-desc {
+    font-size: 11px;
+    color: #767676;
+    line-height: 1.6;
+    max-width: 240px;
+  }
+
+  .btn-google {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 16px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: inherit;
+    font-weight: 500;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .btn-google:hover { background: #f7f7f7; border-color: #ccc; }
+  .btn-google:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Main screen ── */
+  .main-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #767676;
+    overflow: hidden;
+  }
+
+  .user-email {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+
+  .btn-link {
+    background: none;
+    border: none;
+    font-size: 11px;
+    font-family: inherit;
+    color: #767676;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .btn-link:hover { color: #e03434; background: #fff0f0; }
+
+  .settings-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #767676;
+    padding: 7px 12px;
+    border-bottom: 1px solid #e5e5e5;
+    user-select: none;
+    transition: color 0.1s;
+  }
+  .settings-toggle:hover { color: #1a1a1a; }
+
+  .settings-panel {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e5e5;
+    background: #f7f7f7;
+  }
+  .settings-panel.open { display: flex; }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+
+  label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #767676;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  input {
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus { border-color: #0d99ff; box-shadow: 0 0 0 2px rgba(13,153,255,0.18); }
+  input::placeholder { color: #b0b0b0; }
+
+  .save-row { display: flex; justify-content: flex-end; margin-top: 2px; }
+
+  .folder-section {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .row { display: flex; gap: 6px; align-items: center; }
+  .row input { flex: 1; }
+
+  button.btn-primary {
+    height: 30px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    background: #0d99ff;
+    color: #fff;
+    transition: background 0.1s;
+    white-space: nowrap;
+  }
+  button.btn-primary:hover { background: #0082d6; }
+  button.btn-primary:disabled { background: #c8c8c8; cursor: not-allowed; }
+
+  .status {
+    padding: 5px 12px;
+    font-size: 11px;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #767676;
+  }
+  .status.error { color: #e03434; }
+  .status.success { color: #14ae5c; }
+
+  .grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    align-content: start;
+  }
+
+  .image-card {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    position: relative;
+    background: #f0f0f0;
+    transition: border-color 0.1s, transform 0.1s;
+  }
+  .image-card:hover { border-color: #0d99ff; transform: scale(1.02); }
+  .image-card.applying { opacity: 0.5; pointer-events: none; }
+
+  .image-card img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+
+  .thumb-placeholder {
+    width: 100%; height: 100%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #c0c0c0;
+    font-size: 22px;
+  }
+
+  .name-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.65));
+    color: #fff;
+    font-size: 9px;
+    padding: 10px 5px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .image-card:hover .name-overlay { opacity: 1; }
+
+  .empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 8px;
+    color: #b0b0b0;
+    text-align: center;
+    line-height: 1.5;
+  }
+  .empty-icon { font-size: 28px; opacity: 0.5; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid #e0e0e0;
+    border-top-color: #0d99ff;
+    border-radius: 50%;
+    animation: spin 0.5s linear infinite;
+    flex-shrink: 0;
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ── Auth screen ── -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-logo">🗂</div>
+  <div class="auth-title">Drive Image Importer</div>
+  <div class="auth-desc">Sign in with your Google account to access Drive folders shared with you.</div>
+  <button class="btn-google" id="signInBtn" onclick="startOAuth()">
+    <svg width="16" height="16" viewBox="0 0 48 48">
+      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.3 0 24 0 14.6 0 6.6 5.4 2.5 13.3l7.8 6C12.3 13 17.7 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.8-2.2 5.1-4.6 6.7l7.2 5.6c4.2-3.9 6.6-9.6 6.6-16.3z"/>
+      <path fill="#FBBC05" d="M10.3 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.8l7.8-6.1z"/>
+      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2.2 1.5-5 2.4-8.7 2.4-6.3 0-11.6-4.2-13.6-9.9l-7.8 6C6.5 42.5 14.6 48 24 48z"/>
+    </svg>
+    Sign in with Google
+  </button>
+  <div class="status error" id="authError"></div>
+</div>
+
+<!-- ── Main screen ── -->
+<div class="main-screen hidden" id="mainScreen">
+
+  <!-- User topbar -->
+  <div class="topbar">
+    <div class="user-info">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="#14ae5c"><circle cx="8" cy="8" r="7" opacity=".2"/><circle cx="8" cy="8" r="3"/></svg>
+      <span class="user-email" id="userEmail">Signed in</span>
+    </div>
+    <button class="btn-link" onclick="signOut()">Sign out</button>
+  </div>
+
+  <!-- Settings toggle -->
+  <div class="settings-toggle" onclick="toggleSettings()">
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
+      <path opacity=".4" d="M13.7 6.3l-1.1-.6a5.8 5.8 0 000-1.4l1.1-.6a.8.8 0 00.3-1.1L13 1.4a.8.8 0 00-1.1-.3l-1.1.6A5.8 5.8 0 009.2.9V-.2H6.8v1.1A5.8 5.8 0 004.2 2L3.1 1.1A.8.8 0 002 1.4L1 3a.8.8 0 00.3 1.1l1.1.6a5.8 5.8 0 000 1.4l-1.1.6A.8.8 0 001 7.8l1 1.6a.8.8 0 001.1.3l1.1-.6c.4.3.8.5 1.4.7v1.1h2.4v-1.1c.5-.2 1-.4 1.4-.7l1.1.6a.8.8 0 001.1-.3l1-1.6a.8.8 0 00-.9-1.5z"/>
+    </svg>
+    Settings
+    <span id="settingsArrow" style="margin-left:auto;font-size:9px;">▾</span>
+  </div>
+
+  <!-- Settings panel -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="field">
+      <label>Target Layer Name</label>
+      <input type="text" id="layerName" placeholder="e.g. image, photo, thumbnail" />
+    </div>
+    <div class="save-row">
+      <button class="btn-primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+
+  <!-- Folder input -->
+  <div class="folder-section">
+    <label>Google Drive Folder</label>
+    <div class="row">
+      <input type="text" id="folderInput" placeholder="Paste folder URL or ID" />
+      <button class="btn-primary" id="loadBtn" onclick="loadImages()">Load</button>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="status" id="status"></div>
+
+  <!-- Image grid -->
+  <div class="grid" id="grid">
+    <div class="empty">
+      <div class="empty-icon">🖼</div>
+      <div>Paste a Drive folder URL<br>and click <strong>Load</strong></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var TOKEN_KEY = 'oauthToken';
+  var currentImages = [];
+  var applying = false;
+  var oauthPopup = null;
+
+  // ── Replace these two values before distributing ──
+  var CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+  var CALLBACK_URL = 'YOUR_CALLBACK_PAGE_URL'; // e.g. https://yourteam.github.io/figma-callback/
+  // ─────────────────────────────────────────────────
+
+  var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+
+  // ── Init ──
+  window.onmessage = function(event) {
+    var msg = event.data.pluginMessage;
+    if (msg) return handlePluginMessage(msg);
+
+    // OAuth callback postMessage from popup
+    if (event.data && event.data.type === 'drive-oauth-token') {
+      receiveToken(event.data.token, event.data.expiresIn);
+    }
+  };
+
+  parent.postMessage({ pluginMessage: { type: 'load-settings' } }, '*');
+
+  function handlePluginMessage(msg) {
+    if (msg.type === 'settings') {
+      var d = msg.data || {};
+      if (d.layerName) document.getElementById('layerName').value = d.layerName;
+      if (d.lastFolder) document.getElementById('folderInput').value = d.lastFolder;
+
+      if (d.token && !isExpired(d.tokenExpiry)) {
+        showMainScreen(d.userEmail || '');
+      } else {
+        showAuthScreen();
+      }
+    }
+    if (msg.type === 'success') { setStatus('', ''); applying = false; }
+    if (msg.type === 'error') { setStatus(msg.message, 'error'); applying = false; }
+  }
+
+  // ── Auth ──
+  function startOAuth() {
+    var state = Math.random().toString(36).slice(2);
+    sessionStorage.setItem('oauthState', state);
+
+    var params = [
+      'client_id=' + encodeURIComponent(CLIENT_ID),
+      'redirect_uri=' + encodeURIComponent(CALLBACK_URL),
+      'response_type=token',
+      'scope=' + encodeURIComponent(SCOPE),
+      'state=' + state
+    ].join('&');
+
+    var url = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+    oauthPopup = window.open(url, 'google-auth', 'width=500,height=620');
+
+    document.getElementById('signInBtn').disabled = true;
+    document.getElementById('authError').textContent = '';
+
+    // Detect if popup was blocked
+    if (!oauthPopup || oauthPopup.closed) {
+      document.getElementById('authError').textContent = 'Popup blocked — allow popups for Figma and try again.';
+      document.getElementById('signInBtn').disabled = false;
+    }
+  }
+
+  function receiveToken(token, expiresIn) {
+    if (oauthPopup) { oauthPopup.close(); oauthPopup = null; }
+
+    var expiry = Date.now() + ((parseInt(expiresIn) || 3600) * 1000);
+
+    // Fetch user email to display
+    fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + token }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(info) {
+      var email = info.email || '';
+      persist({ token: token, tokenExpiry: expiry, userEmail: email });
+      showMainScreen(email);
+    })
+    .catch(function() {
+      persist({ token: token, tokenExpiry: expiry, userEmail: '' });
+      showMainScreen('');
+    });
+  }
+
+  function signOut() {
+    persist({ token: null, tokenExpiry: null, userEmail: null });
+    currentImages = [];
+    document.getElementById('grid').innerHTML = '<div class="empty"><div class="empty-icon">🖼</div><div>Paste a Drive folder URL<br>and click <strong>Load</strong></div></div>';
+    showAuthScreen();
+  }
+
+  function isExpired(expiry) {
+    return !expiry || Date.now() > expiry - 60000; // 1 min buffer
+  }
+
+  function showAuthScreen() {
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('signInBtn').disabled = false;
+  }
+
+  function showMainScreen(email) {
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('mainScreen').classList.remove('hidden');
+    document.getElementById('userEmail').textContent = email || 'Signed in';
+  }
+
+  // ── Settings ──
+  function toggleSettings() {
+    var panel = document.getElementById('settingsPanel');
+    var arrow = document.getElementById('settingsArrow');
+    var open = panel.classList.toggle('open');
+    arrow.textContent = open ? '▴' : '▾';
+  }
+
+  function saveSettings() {
+    var layerName = document.getElementById('layerName').value.trim();
+    persist({ layerName: layerName });
+    setStatus('Saved', 'success');
+    setTimeout(function() { setStatus('', ''); }, 2000);
+    document.getElementById('settingsPanel').classList.remove('open');
+    document.getElementById('settingsArrow').textContent = '▾';
+  }
+
+  // ── Persist helper: merge with existing saved data ──
+  function persist(partial) {
+    parent.postMessage({ pluginMessage: { type: 'merge-settings', data: partial } }, '*');
+  }
+
+  // ── Drive ──
+  function extractFolderId(value) {
+    var urlMatch = value.match(/\/folders\/([a-zA-Z0-9_-]{10,})/);
+    if (urlMatch) return urlMatch[1];
+    if (/^[a-zA-Z0-9_-]{10,}$/.test(value.trim())) return value.trim();
+    return null;
+  }
+
+  async function getToken() {
+    return new Promise(function(resolve) {
+      // We read the token from a one-time request to the main thread
+      var handler = function(event) {
+        var msg = event.data.pluginMessage;
+        if (msg && msg.type === 'current-token') {
+          window.removeEventListener('message', handler);
+          resolve(msg.token);
+        }
+      };
+      window.addEventListener('message', handler);
+      parent.postMessage({ pluginMessage: { type: 'get-token' } }, '*');
+    });
+  }
+
+  async function loadImages() {
+    var folderRaw = document.getElementById('folderInput').value.trim();
+    if (!folderRaw) { setStatus('Enter a folder URL or ID', 'error'); return; }
+
+    var folderId = extractFolderId(folderRaw);
+    if (!folderId) { setStatus('Could not parse folder ID from that URL', 'error'); return; }
+
+    var token = await getToken();
+    if (!token) { setStatus('Session expired — please sign in again', 'error'); showAuthScreen(); return; }
+
+    var btn = document.getElementById('loadBtn');
+    btn.disabled = true;
+    setStatus('<div class="spinner"></div> Loading…', 'info');
+
+    try {
+      var url = 'https://www.googleapis.com/drive/v3/files'
+        + '?q=%27' + folderId + '%27+in+parents'
+        + '&fields=files(id,name,mimeType)'
+        + '&pageSize=100';
+
+      var res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+
+      if (res.status === 401) {
+        signOut();
+        setStatus('Session expired — please sign in again', 'error');
+        return;
+      }
+      if (!res.ok) {
+        var errData = await res.json().catch(function() { return {}; });
+        throw new Error((errData.error && errData.error.message) || 'HTTP ' + res.status);
+      }
+
+      var data = await res.json();
+      var images = (data.files || []).filter(function(f) {
+        return f.mimeType && f.mimeType.startsWith('image/');
+      });
+
+      persist({ lastFolder: folderRaw });
+
+      if (images.length === 0) {
+        setStatus('No images found in this folder', 'info');
+        renderGrid([]);
+      } else {
+        setStatus(images.length + ' image' + (images.length !== 1 ? 's' : '') + ' — click one to apply', 'info');
+        currentImages = images;
+        renderGrid(images, token);
+      }
+    } catch (err) {
+      setStatus(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderGrid(images) {
+    var grid = document.getElementById('grid');
+    if (images.length === 0) {
+      grid.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div>No images found</div></div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < images.length; i++) {
+      var img = images[i];
+      var thumb = 'https://drive.google.com/thumbnail?id=' + img.id + '&sz=w200';
+      html += '<div class="image-card" id="card-' + i + '" onclick="applyImage(' + i + ')">'
+        + '<img src="' + thumb + '" alt="' + escapeAttr(img.name) + '" loading="lazy"'
+        + ' onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">'
+        + '<div class="thumb-placeholder">🖼</div>'
+        + '<div class="name-overlay">' + escapeHtml(img.name) + '</div>'
+        + '</div>';
+    }
+    grid.innerHTML = html;
+  }
+
+  async function applyImage(index) {
+    if (applying) return;
+
+    var layerName = document.getElementById('layerName').value.trim();
+    if (!layerName) {
+      setStatus('Set a target layer name in Settings first', 'error');
+      document.getElementById('settingsPanel').classList.add('open');
+      document.getElementById('settingsArrow').textContent = '▴';
+      return;
+    }
+
+    var token = await getToken();
+    if (!token) { showAuthScreen(); return; }
+
+    var img = currentImages[index];
+    var card = document.getElementById('card-' + index);
+
+    applying = true;
+    card.classList.add('applying');
+    setStatus('<div class="spinner"></div> Downloading ' + escapeHtml(img.name) + '…', 'info');
+
+    try {
+      var res = await fetch(
+        'https://www.googleapis.com/drive/v3/files/' + img.id + '?alt=media',
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      if (!res.ok) throw new Error('Download failed (HTTP ' + res.status + ')');
+
+      var buffer = await res.arrayBuffer();
+      var imageData = Array.from(new Uint8Array(buffer));
+
+      parent.postMessage({
+        pluginMessage: { type: 'apply-image', imageData: imageData, layerName: layerName }
+      }, '*');
+    } catch (err) {
+      setStatus(err.message, 'error');
+      applying = false;
+    } finally {
+      card.classList.remove('applying');
+    }
+  }
+
+  function setStatus(html, type) {
+    var el = document.getElementById('status');
+    el.innerHTML = html;
+    el.className = 'status ' + (type || '');
+  }
+  function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escapeAttr(s) { return String(s).replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Authenticating…</title>
+<style>
+  body { font-family: system-ui, sans-serif; display: flex; align-items: center;
+         justify-content: center; height: 100vh; margin: 0; background: #f7f7f7; }
+  p { color: #555; font-size: 14px; }
+</style>
+</head>
+<body>
+<p id="msg">Authenticating… you can close this window.</p>
+<script>
+  // Parse URL hash returned by Google OAuth implicit flow
+  var hash = location.hash.replace(/^#/, '');
+  var params = {};
+  hash.split('&').forEach(function(pair) {
+    var kv = pair.split('=');
+    params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
+  });
+
+  if (params.access_token && window.opener) {
+    window.opener.postMessage(
+      { type: 'drive-oauth-token', token: params.access_token, expiresIn: params.expires_in },
+      '*'
+    );
+    window.close();
+  } else if (params.error) {
+    document.getElementById('msg').textContent = 'Authentication failed: ' + params.error;
+  } else {
+    document.getElementById('msg').textContent = 'No token received. You can close this window.';
+  }
+</script>
+</body>
+</html>
